@@ -1,44 +1,49 @@
-name: Build and Deploy Azure Functions
+name: Build and Deploy Azure Function - controlepedidos-cpfregister
 
 on:
-  pull_request:
+  push:
     branches:
       - main
+  workflow_dispatch:
+
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  DOTNET_VERSION: '8.0.x'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Setup DotNet Environment
+        uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore CpfRegisterFunction/CpfRegisterFunction.csproj
-
-      - name: Build and Publish
+      - name: Publish Project Using Dotnet
+        shell: bash
         run: |
-          dotnet publish CpfRegisterFunction/CpfRegisterFunction.csproj \
-            --configuration Release \
-            --output ./publish/cpfregister
-      - name: Zip package
-        run: |
-          cd publish
-          zip -r cpfregister.zip cpfregister
+          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+          dotnet publish --configuration Release --output ./publish
+          popd
 
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Login to Azure
+        uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.__clientidsecretname__ }}
+          tenant-id: ${{ secrets.__tenantidsecretname__ }}
+          subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
 
-    
-      - name: Deploy Azure Function
-        uses: azure/functions-action@v1
+      - name: Run Azure Functions Action
+        uses: Azure/functions-action@v1
+        id: fa
         with:
-          app-name: "controlepedidos-cpfregister"
-          package: "./publish/cpfregister.zip"
+          app-name: 'controlepedidos-cpfregister'
+          slot-name: 'Production'
+          package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/publish'
