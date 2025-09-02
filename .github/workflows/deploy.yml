@@ -1,0 +1,36 @@
+name: Build and Deploy Azure Functions
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build CpfRegisterFunction
+        run: dotnet publish CpfRegisterFunction/CpfRegisterFunction.csproj --configuration Release --output ./publish/cpfregister
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy CpfRegisterFunction
+        uses: azure/functions-action@v1
+        with:
+          app-name: "controlepedidos-cpfregister"
+          package: "./publish/cpfregister"
