@@ -1,49 +1,36 @@
-name: Build and Deploy Azure Function - controlepedidos-cpfregister
+name: Build and Deploy Azure Functions
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-  workflow_dispatch:
-
-env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
-  DOTNET_VERSION: '8.0.x'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Setup DotNet Environment
-        uses: actions/setup-dotnet@v1
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: '8.0.x'
 
-      - name: Publish Project Using Dotnet
-        shell: bash
-        run: |
-          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
-          dotnet publish --configuration Release --output ./publish
-          popd
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Login to Azure
-        uses: azure/login@v2
+      - name: Build CpfRegisterFunction
+        run: dotnet publish CpfRegisterFunction/CpfRegisterFunction.csproj --configuration Release --output ./publish/cpfregister
+
+      - name: Azure Login
+        uses: azure/login@v1
         with:
-          client-id: ${{ secrets.__clientidsecretname__ }}
-          tenant-id: ${{ secrets.__tenantidsecretname__ }}
-          subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Run Azure Functions Action
-        uses: Azure/functions-action@v1
-        id: fa
+      - name: Deploy CpfRegisterFunction
+        uses: azure/functions-action@v1
         with:
-          app-name: 'controlepedidos-cpfregister'
-          slot-name: 'Production'
-          package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/publish'
+          app-name: "controlepedidos-cpfregister"
+          package: "./publish/cpfregister"
