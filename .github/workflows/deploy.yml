@@ -19,18 +19,26 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore CpfRegisterFunction/CpfRegisterFunction.csproj
 
-      - name: Build CpfRegisterFunction
-        run: dotnet publish CpfRegisterFunction/CpfRegisterFunction.csproj --configuration Release --output ./publish/cpfregister
+      - name: Build and Publish
+        run: |
+          dotnet publish CpfRegisterFunction/CpfRegisterFunction.csproj \
+            --configuration Release \
+            --output ./publish/cpfregister
+      - name: Zip package
+        run: |
+          cd publish
+          zip -r cpfregister.zip cpfregister
 
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy CpfRegisterFunction
+    
+      - name: Deploy Azure Function
         uses: azure/functions-action@v1
         with:
           app-name: "controlepedidos-cpfregister"
-          package: "./publish/cpfregister"
+          package: "./publish/cpfregister.zip"
