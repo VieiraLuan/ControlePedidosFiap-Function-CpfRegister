@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "TENANT_ID": "TENANT_VALUE_HERE",
+    "CLIENT_ID": "CLIENT_ID_VALUE_HERE",
+    "CLIENT_SECRET": "CLIENT_SECRET_VALUE_HERE",
+    "SCOPE": "https://graph.microsoft.com/.default",
+    "GRANT_TYPE": "client_credentials",
+    "ADD_USER_URL": "https://graph.microsoft.com/v1.0/users"
+  }
+}
