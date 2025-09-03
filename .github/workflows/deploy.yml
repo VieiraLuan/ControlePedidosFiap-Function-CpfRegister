@@ -7,11 +7,10 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: controlepedidos-cpfregister
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: CpfRegisterFunction/published
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
   WORKING_DIRECTORY: CpfRegisterFunction
-  RESOURCE_GROUP: controlepedidos-rg
+  PACKAGE_ZIP: functionapp.zip
 
 jobs:
   build:
@@ -31,14 +30,24 @@ jobs:
       - name: Build project
         run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
 
-      - name: Publish project
-        run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --output "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+      - name: Publish project with Functions metadata
+        run: |
+          dotnet publish "${{ env.WORKING_DIRECTORY }}" \
+            --configuration ${{ env.CONFIGURATION }} \
+            --output ./published \
+            /p:GenerateFunctions=true
+
+      - name: Zip published folder
+        run: |
+          cd published
+          zip -r ../${{ env.PACKAGE_ZIP }} .
+          cd ..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: functionapp
-          path: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          path: ${{ env.PACKAGE_ZIP }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -48,22 +57,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: functionapp
-          path: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Stop Function App
-        run: az functionapp stop --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+          path: .
 
       - name: Deploy to Azure Function App
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           publish-profile: ${{ secrets.controlepedidos_cpfregister_EBF1 }}
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-
-      - name: Start Function App
-        run: az functionapp start --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+          package: ${{ env.PACKAGE_ZIP }}
