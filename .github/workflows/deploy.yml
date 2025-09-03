@@ -66,12 +66,12 @@ jobs:
         run: |
           az functionapp stop --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }}
 
-      - name: Deploy files to Azure Function App
+      - name: Deploy files to Azure Function App (Linux)
         run: |
-          az functionapp deployment source config-zip \
+          az webapp deployment source config-zip \
             --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
             --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }} \
-            --src ${{ env.PACKAGE_ZIP }}
+            --src ${{ env.PACKAGE_ZIP }} 
 
       - name: Start Azure Function App
         run: |
