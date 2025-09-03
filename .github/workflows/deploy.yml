@@ -40,7 +40,7 @@ jobs:
       - name: Zip published folder
         run: |
           cd published
-          zip -r ../${{ env.PACKAGE_ZIP }} .
+          zip -r ../${{ env.PACKAGE_ZIP }} *
           cd ..
       - name: Upload artifact
         uses: actions/upload-artifact@v4
