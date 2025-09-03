@@ -40,28 +40,20 @@ jobs:
 
       - name: Zip published folder
         run: |
-          cd published
-          zip -r ../${{ env.PACKAGE_ZIP }} .
-          cd ..
+          zip -r ${{ env.PACKAGE_ZIP }} ./published/*
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Azure Login
+      - name: Azure Login using Service Principal
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Stop Function App
-        run: az functionapp stop --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
-
-      - name: Deploy zip via CLI
+      - name: Deploy to Azure Function App via ZIP
         run: |
           az functionapp deployment source config-zip \
             --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --src ${{ github.workspace }}/${{ env.PACKAGE_ZIP }}
-
-      - name: Start Function App
-        run: az functionapp start --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+            --src ${{ env.PACKAGE_ZIP }}
