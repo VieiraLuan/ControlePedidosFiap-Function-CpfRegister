@@ -7,11 +7,11 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: controlepedidos-cpfregister
+  AZURE_FUNCTIONAPP_RG: controlepedidos-rg 
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
   WORKING_DIRECTORY: CpfRegisterFunction
   PACKAGE_ZIP: functionapp.zip
-  RESOURCE_GROUP: controlepedidos-rg
 
 jobs:
   build:
@@ -37,23 +37,42 @@ jobs:
             --configuration ${{ env.CONFIGURATION }} \
             --output ./published \
             /p:GenerateFunctions=true
-
       - name: Zip published folder
         run: |
-          zip -r ${{ env.PACKAGE_ZIP }} ./published/*
-
+          cd published
+          zip -r ../${{ env.PACKAGE_ZIP }} .
+          cd ..
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: functionapp
+          path: ${{ env.PACKAGE_ZIP }}
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Azure Login using Service Principal
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: functionapp
+          path: .
+
+      - name: Azure Login via Service Principal
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Function App via ZIP
+      - name: Stop Azure Function App
+        run: |
+          az functionapp stop --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }}
+
+      - name: Deploy files to Azure Function App
         run: |
           az functionapp deployment source config-zip \
             --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }} \
             --src ${{ env.PACKAGE_ZIP }}
+
+      - name: Start Azure Function App
+        run: |
+          az functionapp start --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }}
