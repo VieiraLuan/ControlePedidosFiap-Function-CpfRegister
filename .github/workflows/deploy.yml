@@ -62,30 +62,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Stop Azure Function App
+      - name: Remove WEBSITE_RUN_FROM_PACKAGE (if exists)
         run: |
-          az functionapp stop --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }}
-
-      - name: Get publish credentials
-        id: publish
-        run: |
-          CREDS=$(az functionapp deployment list-publishing-credentials \
+          az functionapp config appsettings delete \
             --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
             --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }} \
-            --query "{user: publishingUserName, pass: publishingPassword}" -o tsv)
-          USERNAME=$(echo $CREDS | awk '{print $1}')
-          PASSWORD=$(echo $CREDS | awk '{print $2}')
-          echo "username=$USERNAME" >> $GITHUB_ENV
-          echo "password=$PASSWORD" >> $GITHUB_ENV
+            --setting-names WEBSITE_RUN_FROM_PACKAGE || true
 
-
-      - name: Deploy via Kudu ZipDeploy
+      - name: Deploy to Azure Function
         run: |
-          curl -X POST -u "$username:$password" \
-            --data-binary @"${{ env.PACKAGE_ZIP }}" \
-            https://${{ env.AZURE_FUNCTIONAPP_NAME }}.scm.azurewebsites.net/api/zipdeploy
-
-
-      - name: Start Azure Function App
-        run: |
-          az functionapp start --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }}
+          az functionapp deployment source config-zip \
+            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+            --resource-group ${{ env.AZURE_FUNCTIONAPP_RG }} \
+            --src ${{ env.PACKAGE_ZIP }}
